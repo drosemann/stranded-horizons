@@ -79,3 +79,121 @@ Ziel: Ein 24/7 Loop der das Vanilla JS Spiel selbst weiterentwickelt – quasi A
 ### Lizenz
 
 GNU GPLv3 – siehe [LICENSE](LICENSE).
+
+### Ziel: stranded-horizons v2 - Persistent One World F2P
+
+*Core Loop:* Jeder Spieler hat einen festen Chunk für immer. Je weiter vom Zentrum, desto schlechter die Fabrik (deine Idee). Fraktionen können Chunks verbinden. Admin kann live eingreifen und MC Welten importieren.
+
+---
+
+## Phase 0 - Fundament (1-2 Wochen)
+
+*Was du jetzt hast:* 18 files vanilla JS + Vercel Auto-Deploy
+
+*Was du änderst:*
+
+1. *Trenne Frontend und Simulation*
+   - `client/` bleibt vanilla JS + Canvas, bleibt auf Vercel
+   - `server/` neu: Node.js + Express + Socket.io, läuft auf deinem KVM (nicht Vercel, zu teuer für WebSockets)
+   - `db/` MariaDB: Tabelle `bases (id, owner, x, y, efficiency, blueprint_json)`
+
+2. *Eine Welt Regel*
+   - Welt = 20000x20000 virtuelle Einheiten, aufgeteilt in 100x100 Chunks
+   - Beim ersten Login: Server sucht freien Chunk mit deiner streuland Logik (kein Grid, random verteilt, Wege dazwischen)
+   - Der Chunk wird für immer in DB gespeichert, selbst wenn Spieler nie wieder kommt
+
+## Phase 1 - Effizienz System + Fester Platz (deine Kern Idee)
+
+*Formel:*
+
+```text
+distanz = sqrt(x² + y²)
+effizienz = max(30, 100 - (distanz / 200))  // 200 Einheiten = 1% Verlust
+```
+
+- Zentrum 0,0 = 100%
+- Rand 7000 = 30%
+- In UI: Chunk Farbe wird blasser je schlechter
+
+*Fraktion Bonus:*
+Wenn 2 Basen verbunden sind (du klickst "Verbinden", beide bestätigen), kriegen beide +10% Effizienz, max 100%. Das pusht Zusammenhalt.
+
+*Code Snippet für Server:*
+
+```js
+// server/world.js
+function getEfficiency(x, y) {
+  const d = Math.hypot(x, y);
+  return Math.max(30, 100 - d * 0.005);
+}
+```
+
+## Phase 2 - Fabriken statt Survival
+
+Weg von Hunger/HP, hin zu Factorio Light im Browser.
+
+- Jeder Chunk hat 20x20 Bau-Grid
+- Gebäude: Mine (produziert), Förderband, Fabrik, Mauer, Turm
+- Alles wird server-authoritative gerechnet alle 2 Sekunden, nicht im Client
+- Client schickt nur: `socket.emit('place', { type, x, y })`, Server prüft Ressourcen und antwortet
+
+Das killt Cheating im Web.
+
+## Phase 3 - Admin Modus (dein Wunsch)
+
+*Nicht ins Spiel bauen, separates Panel.*
+
+Du hast schon `management-panel :5173/:3001`, nimm das gleiche:
+
+- Route `/admin/world`
+- Live Map mit Leaflet.js (Open Source, wie Minecraft Map)
+- Klick auf Chunk: Edit JSON, platziere Struktur, setze Effizienz manuell
+- Button "Welt Event": platziere z.B. 10 Bunker Ruinen in alten Chunks für Content
+
+Backend: Admin Panel schreibt in MariaDB + `redis.publish('chunk:update', chunkId)`, alle Worker die den Chunk haben laden neu.
+
+*Shortcut wie in ed-docs:* Admin drückt im Spiel `:` und hat Konsole `:tp 0 0`, `:give iron 100`, `:place bunker`.
+
+## Phase 4 - Minecraft Import (dein Killer Feature)
+
+Das macht kein anderes Web Game.
+
+*Pipeline:*
+
+1. *Upload:* Admin lädt `.schematic` / `.schem` oder ganzen `region/` Ordner im Admin Panel hoch
+2. *Parser:* Python Service (dein Python Fokus) mit `mca` + `amulet` liest Blöcke
+3. *Mapping Tabelle* `mc_to_sh.json`:
+
+```json
+{
+  "minecraft:stone": "sh:metal_wall",
+  "minecraft:iron_block": "sh:factory_t1",
+  "minecraft:chest": "sh:loot_container",
+  "minecraft:spawner": "sh:enemy_spawner"
+}
+```
+
+4. *Transform:* Skript erstellt daraus dein Basis Blueprint JSON
+5. *Place:* Im Admin Panel Vorschau, dann in Welt setzen als Dungeon/Ruine
+
+Damit kannst du 1000 SpigotMC Maps aus deiner MineHub Zeit importieren. Unendlich Content ohne selbst zu bauen.
+
+## Phase 5 - Hosting + Scale (dein infra-pilot Endgame)
+
+- Jeder 1000x1000 Bereich = ein Docker Container = ein Worker
+- infra-pilot startet automatisch neuen Worker wenn Bereich >80% voll
+- Vercel Frontend bleibt, aber WebSocket geht direkt zu `ws.shadowunity.de` auf deinen KVM
+- Monitoring mit HetrixTools wie du es eh hast
+
+*Monetarisierung F2P ohne Pay2Win:*
+- Basis kostenlos
+- 2. Basis Slot: 3€ einmalig
+- Cosmetics für Basis Skin
+- Effizienz Booster am Rand: 2€ für 7 Tage, aber nie über 100%
+
+### Reihenfolge zum Starten:
+
+1. Heute: Lege `server/` Ordner in stranded-horizons Repo an, Express + Socket.io + MariaDB connect
+2. Diese Woche: Feste Chunk Vergabe + Effizienz Formel implementieren
+3. Nächste Woche: Admin Panel von infra-pilot kopieren und als `/admin` wiederverwenden
+4. Danach: MC Import Python Skript
