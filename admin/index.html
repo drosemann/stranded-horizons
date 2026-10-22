@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SH Admin — World</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>body{margin:0;font-family:system-ui}#map{height:90vh}.bar{padding:8px;background:#111;color:#fff}</style>
+</head>
+<body>
+<div class="bar">Stranded Horizons admin — chunks coloured by efficiency (CRS.Simple). Admin auth via Supabase; all writes audited.</div>
+<div id="map"></div>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+// CRS.Simple: game units map 1:1. Admin fetches /admin/chunks from the server (same auth).
+const map = L.map('map', { crs: L.CRS.Simple, minZoom: -6 }).setView([0, 0], -3);
+function color(e) { return e >= 90 ? '#63e6be' : e >= 70 ? '#ffd43b' : e >= 50 ? '#ffa94d' : '#ff6b6b'; }
+async function load() {
+  const r = await fetch('/admin/chunks', { headers: { Authorization: 'Bearer ' + (window.SH_ADMIN_TOKEN || '') } });
+  const chunks = await r.json();
+  chunks.forEach((c) => {
+    const s = 200;
+    L.rectangle([[c.world_y - s / 2, c.world_x - s / 2], [c.world_y + s / 2, c.world_x + s / 2]],
+      { color: color(c.efficiency_cached) }).addTo(map).bindPopup(JSON.stringify(c));
+  });
+}
+load().catch(() => {});
+</script>
+</body>
+</html>

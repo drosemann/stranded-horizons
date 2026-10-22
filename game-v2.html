@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Stranded Horizons v2 — One World</title>
+<style>
+body{font-family:Inter,system-ui,sans-serif;background:#090b16;color:#f8f9fa;margin:0}
+.wrap{max-width:900px;margin:0 auto;padding:20px}
+.card{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.15);border-radius:12px;padding:16px;margin-bottom:12px}
+button{background:#6c5ce7;color:#fff;border:0;border-radius:8px;padding:8px 14px;cursor:pointer;margin:2px}
+input,select{background:#11142a;color:#fff;border:1px solid #333;border-radius:8px;padding:8px;margin:2px}
+#grid{display:grid;grid-template-columns:repeat(20,22px);gap:2px;margin-top:8px}
+#grid div{width:22px;height:22px;background:#1a1e38;border-radius:4px;font-size:10px;text-align:center;line-height:22px;cursor:pointer}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Stranded Horizons v2 — One World (alpha)</h1>
+  <div class="card">
+    <p>Static page: works on Vercel as-is. Set <code>window.SH_SOCKET_URL</code> before loading, paste your Supabase JWT, then connect.</p>
+    <input id="token" placeholder="Supabase JWT" style="width:100%">
+    <br><button id="connect">Connect</button>
+    <span id="status">Not connected.</span>
+  </div>
+  <div class="card"><h3>My chunk</h3><div id="chunk">—</div></div>
+  <div class="card"><h3>Build (20×20 grid)</h3>
+    <select id="btype"><option>mine</option><option>solar</option><option>conveyor</option><option>factory</option><option>wall</option><option>turret</option></select>
+    <div id="grid"></div>
+  </div>
+  <div class="card"><button id="booster">Activate booster (500 credits, +10% / 7 days)</button> <span id="msg"></span></div>
+</div>
+<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+<script>
+const grid = document.getElementById('grid');
+for (let y = 0; y < 20; y++) for (let x = 0; x < 20; x++) {
+  const c = document.createElement('div');
+  c.onclick = () => place(x, y, c);
+  grid.appendChild(c);
+}
+let socket = null;
+document.getElementById('connect').onclick = () => {
+  socket = io(window.SH_SOCKET_URL || '', { auth: { token: document.getElementById('token').value } });
+  socket.on('connect', () => { document.getElementById('status').textContent = 'Connected.'; socket.emit('chunk:get', show); });
+  socket.on('connect_error', () => { document.getElementById('status').textContent = 'Auth/connection failed.'; });
+};
+function show(r) { document.getElementById('chunk').textContent = r.ok ? JSON.stringify(r.base) : r.error; }
+function place(x, y, cell) {
+  const type = document.getElementById('btype').value;
+  socket.emit('place', { grid_x: x, grid_y: y, type }, (r) => {
+    document.getElementById('msg').textContent = r.ok ? `Placed ${type}` : r.error;
+    if (r.ok) cell.textContent = type[0].toUpperCase();
+  });
+}
+document.getElementById('booster').onclick = () => {
+  socket.emit('booster:activate', (r) => {
+    document.getElementById('msg').textContent = r.ok ? 'Booster active until ' + r.expires_at : r.error;
+  });
+};
+</script>
+</body>
+</html>

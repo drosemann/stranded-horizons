@@ -1,0 +1,9 @@
+{
+  "__version__": "0.1.0",
+  "__default__": "sh:ignore",
+  "minecraft:stone": "sh:metal_wall",
+  "minecraft:iron_block": "sh:factory_t1",
+  "minecraft:chest": "sh:loot_container",
+  "minecraft:mob_spawner": "sh:enemy_spawner",
+  "minecraft:spawner": "sh:enemy_spawner"
+}
