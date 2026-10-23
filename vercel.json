@@ -10,7 +10,7 @@
       ]
     },
     {
-      "source": "/game.js",
+      "source": "/src/(.*)",
       "headers": [
         {
           "key": "Cache-Control",
