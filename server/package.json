@@ -2,7 +2,7 @@
   "name": "stranded-horizons-server",
   "version": "0.1.0",
   "type": "module",
-  "license": "GPL-3.0-only",
+  "license": "MIT",
   "scripts": {
     "start": "node src/index.js",
     "smoke": "node test/smoke.js"

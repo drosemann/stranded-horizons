@@ -78,7 +78,7 @@ Ziel: Ein 24/7 Loop der das Vanilla JS Spiel selbst weiterentwickelt – quasi A
 
 ### Lizenz
 
-GNU GPLv3 – siehe [LICENSE](LICENSE).
+Ab 24.10.2026 MIT – siehe [LICENSE](LICENSE). Ältere Stände bleiben GNU GPLv3.
 
 ### Ziel: stranded-horizons v2 - Persistent One World F2P
 
